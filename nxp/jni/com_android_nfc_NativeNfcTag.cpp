@@ -632,7 +632,21 @@ static jboolean com_android_nfc_NativeNfcTag_doDisconnect(JNIEnv *e, jobject o)
    /* Disconnect */
    TRACE("Disconnecting from tag (%x)", handle);
 
-   if (handle == -1) {
+   if(pRemDevInfo!=NULL &&
+      (pRemDevInfo->RemDevType == phNfc_eISO14443_A_PCD ||
+       pRemDevInfo->RemDevType == phNfc_eISO14443_B_PCD))
+   {
+      if(pRemDevInfo->RemoteDevInfo.Iso14443_4_PCD_Info.buffer!=NULL &&
+         pRemDevInfo->RemoteDevInfo.Iso14443_4_PCD_Info.length>0)
+      {
+        free(pRemDevInfo->RemoteDevInfo.Iso14443_4_PCD_Info.buffer);
+        pRemDevInfo->RemoteDevInfo.Iso14443_4_PCD_Info.buffer = NULL;
+        pRemDevInfo->RemoteDevInfo.Iso14443_4_PCD_Info.length = 0;
+      }
+      phOsalNfc_FreeMemory(pRemDevInfo);
+   }
+   else if(handle==-1)
+   {
        // Was never connected to any tag, exit
        result = JNI_TRUE;
        ALOGE("doDisconnect() - Target already disconnected");
@@ -673,12 +687,6 @@ static jboolean com_android_nfc_NativeNfcTag_doDisconnect(JNIEnv *e, jobject o)
     {
         goto clean_and_return;
     }
-
-      /* Disconnect Status */
-      if(cb_data.status != NFCSTATUS_SUCCESS)
-      {
-          goto clean_and_return;
-      }
    }
    result = JNI_TRUE;
 
